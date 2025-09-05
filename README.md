@@ -169,63 +169,228 @@ To verify the security improvements:
 
 ---
 
-## Getting Started
+## 🚀 Getting Started
 
-To run this secure polling application on your local machine:
+This guide will help you set up ALX Polly on your local machine in just a few minutes!
 
-### 1. Prerequisites
+### 📋 Prerequisites
 
--   [Node.js](https://nodejs.org/) (v20.x or higher recommended)
--   [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
--   A [Supabase](https://supabase.io/) account (the project is pre-configured, but you may need your own for a clean slate).
+Before you begin, make sure you have:
 
-### 2. Installation
+- **Node.js** (v20.x or higher) - [Download here](https://nodejs.org/)
+- **npm** or **yarn** package manager
+- **Git** for version control
+- **Supabase account** - [Sign up for free](https://supabase.io/)
 
-Clone the repository and install the dependencies:
+### 🛠️ Installation Steps
 
+#### Step 1: Clone the Repository
 ```bash
 git clone <repository-url>
 cd alx-polly
+```
+
+#### Step 2: Install Dependencies
+```bash
 npm install
+# or
+yarn install
 ```
 
-### 3. Environment Variables
+#### Step 3: Set Up Supabase
 
-The project uses Supabase for its backend. Create a `.env.local` file with your Supabase credentials:
+1. **Create a Supabase Project:**
+   - Go to [supabase.com](https://supabase.com/)
+   - Click "Start your project"
+   - Create a new project
+   - Wait for the project to be ready (2-3 minutes)
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+2. **Get Your Credentials:**
+   - Go to **Settings** → **API**
+   - Copy your **Project URL** and **anon/public key**
+
+3. **Create Environment File:**
+   ```bash
+   # Create .env.local file in the project root
+   touch .env.local
+   ```
+
+4. **Add Your Credentials:**
+   ```env
+   # .env.local
+   NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+   ```
+
+#### Step 4: Set Up Database Tables
+
+Run these SQL commands in your Supabase SQL editor:
+
+```sql
+-- Create polls table
+CREATE TABLE polls (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  question TEXT NOT NULL CHECK (length(question) >= 3 AND length(question) <= 500),
+  options TEXT[] NOT NULL CHECK (array_length(options, 1) >= 2 AND array_length(options, 1) <= 10),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create votes table
+CREATE TABLE votes (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  poll_id UUID REFERENCES polls(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  option_index INTEGER NOT NULL CHECK (option_index >= 0),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable Row Level Security
+ALTER TABLE polls ENABLE ROW LEVEL SECURITY;
+ALTER TABLE votes ENABLE ROW LEVEL SECURITY;
+
+-- Create policies
+CREATE POLICY "Users can view all polls" ON polls FOR SELECT USING (true);
+CREATE POLICY "Users can create polls" ON polls FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update their own polls" ON polls FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete their own polls" ON polls FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view all votes" ON votes FOR SELECT USING (true);
+CREATE POLICY "Users can create votes" ON votes FOR INSERT WITH CHECK (true);
 ```
 
-### 4. Project Structure
+#### Step 5: Start the Development Server
+```bash
+npm run dev
+# or
+yarn dev
+```
+
+🎉 **Success!** Your app is now running at `http://localhost:3000`
+
+### 📁 Project Structure
 
 ```
 alx-polly/
-├── app/
-│   ├── (auth)/           # Authentication pages
-│   ├── (dashboard)/      # Protected dashboard routes
+├── app/                          # Next.js App Router
+│   ├── (auth)/                   # Authentication pages (login, register)
+│   │   ├── login/page.tsx        # Login page component
+│   │   └── register/page.tsx     # Registration page component
+│   ├── (dashboard)/              # Protected dashboard routes
+│   │   ├── create/               # Poll creation
+│   │   │   ├── page.tsx          # Create poll page
+│   │   │   └── PollCreateForm.tsx # Poll creation form component
+│   │   ├── polls/                # Poll management
+│   │   │   ├── page.tsx          # User polls dashboard
+│   │   │   ├── PollActions.tsx   # Poll card component
+│   │   │   └── [id]/             # Individual poll pages
+│   │   └── layout.tsx            # Dashboard layout
 │   ├── lib/
-│   │   ├── actions/      # Server actions (poll-actions.ts, auth-actions.ts)
-│   │   └── types/        # TypeScript type definitions
-│   └── components/       # Reusable UI components
-├── lib/
-│   ├── security.ts       # Security utilities and validation
-│   ├── rate-limit.ts     # Rate limiting implementation
-│   └── supabase/         # Supabase client configuration
-├── components/ui/        # shadcn/ui components
-└── SECURITY_FIXES.md     # Detailed security audit documentation
+│   │   ├── actions/              # Server Actions (secure API endpoints)
+│   │   │   ├── auth-actions.ts   # Authentication functions
+│   │   │   └── poll-actions.ts   # Poll management functions
+│   │   ├── context/              # React context providers
+│   │   └── types/                # TypeScript type definitions
+│   ├── components/               # Reusable UI components
+│   └── globals.css               # Global styles
+├── lib/                          # Utility libraries
+│   ├── security.ts               # Security utilities & validation
+│   ├── rate-limit.ts             # Rate limiting implementation
+│   └── supabase/                 # Supabase client configuration
+├── components/ui/                # shadcn/ui components
+├── middleware.ts                 # Next.js middleware for auth
+└── SECURITY_FIXES.md             # Security audit documentation
 ```
 
-### 5. Running the Development Server
+## 📖 Usage Examples
 
-Start the application in development mode:
+### Creating a Poll
+1. **Sign up** for an account or **log in**
+2. Click **"Create New Poll"** from the dashboard
+3. **Enter your question** (3-500 characters)
+4. **Add options** (2-10 options, 1-200 characters each)
+5. Click **"Create Poll"** to save
 
+### Voting on a Poll
+1. **Navigate** to a poll (via shared link or dashboard)
+2. **Select** your preferred option
+3. Click **"Submit Vote"**
+4. **View results** in real-time
+
+### Managing Your Polls
+- **View all polls** on your dashboard
+- **Edit polls** you own (click "Edit" button)
+- **Delete polls** you own (click "Delete" button)
+- **Share polls** using the shareable link
+
+## 🧪 Testing the Application
+
+### Manual Testing Checklist
+
+#### Authentication Flow
+- [ ] **Registration**: Create new account with valid email/password
+- [ ] **Login**: Sign in with existing credentials
+- [ ] **Logout**: Sign out and verify redirect to login
+- [ ] **Protected Routes**: Try accessing `/polls` without login
+
+#### Poll Creation
+- [ ] **Valid Poll**: Create poll with 2+ options
+- [ ] **Validation**: Try creating poll with < 2 options
+- [ ] **Length Limits**: Test question/option length limits
+- [ ] **Rate Limiting**: Create multiple polls quickly
+
+#### Voting System
+- [ ] **Valid Vote**: Vote on existing poll
+- [ ] **Duplicate Prevention**: Try voting twice (if logged in)
+- [ ] **Anonymous Voting**: Vote without being logged in
+- [ ] **Invalid Options**: Try voting with invalid option index
+
+#### Security Features
+- [ ] **Authorization**: Try editing/deleting others' polls
+- [ ] **Input Sanitization**: Submit polls with HTML/script tags
+- [ ] **Rate Limiting**: Submit votes rapidly
+- [ ] **Error Handling**: Test with invalid data
+
+### Automated Testing
 ```bash
-npm run dev
+# Run TypeScript type checking
+npm run tsc
+
+# Run ESLint for code quality
+npm run lint
+
+# Build the application
+npm run build
 ```
 
-The application will be available at `http://localhost:3000`.
+## 🤝 Contributing
+
+We welcome contributions! Here's how to get started:
+
+### Development Workflow
+1. **Fork** the repository
+2. **Create** a feature branch: `git checkout -b feature/amazing-feature`
+3. **Make** your changes with proper documentation
+4. **Test** your changes thoroughly
+5. **Commit** with clear messages: `git commit -m 'Add amazing feature'`
+6. **Push** to your branch: `git push origin feature/amazing-feature`
+7. **Open** a Pull Request
+
+### Code Standards
+- **Documentation**: Add JSDoc comments for all functions/components
+- **TypeScript**: Use proper typing throughout
+- **Security**: Follow security best practices
+- **Testing**: Test all new functionality
+- **Style**: Follow existing code patterns
+
+### Areas for Contribution
+- 🐛 **Bug fixes** and improvements
+- 🚀 **New features** (poll categories, advanced voting, etc.)
+- 📚 **Documentation** improvements
+- 🧪 **Test coverage** expansion
+- 🎨 **UI/UX** enhancements
+- 🔒 **Security** improvements
 
 ## 🎉 **Security Audit Complete!**
 
